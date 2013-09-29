@@ -1,0 +1,112 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=7, IE=9, IE=10">
+    <!--The viewport meta tag is used to improve the presentation and behavior of the samples 
+      on iOS devices-->
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no">
+    <title>Create Map</title>
+
+    <link rel="stylesheet" href="http://js.arcgis.com/3.6/js/dojo/dijit/themes/claro/claro.css">
+    <link rel="stylesheet" href="http://js.arcgis.com/3.6/js/esri/css/esri.css">
+
+    <!--Added scripts-->
+    <script src="/Scripts/jquery-1.9.1.js" type="text/javascript"></script>
+    <script src="/Scripts/XSockets.latest.js" type="text/javascript"></script>
+    <!--Added scripts End-->
+
+    <script src="http://js.arcgis.com/3.6/"></script>
+    <script>
+        dojo.require("esri.map");
+
+        //////Added code:
+        var ws;
+        //////Added code end
+
+        function init() {
+            var initialExtent = new esri.geometry.Extent({ "xmin": 244598, "ymin": 6241389, "xmax": 278995, "ymax": 6264320, "spatialReference": { "wkid": 102100 } });
+            var map = new esri.Map("map", {
+                basemap: "streets",
+                extent: initialExtent
+            });
+            dojo.connect(map, "onExtentChange", showExtent);
+
+            //////Added code in init:
+            //Initialize websockets
+            ws = new XSockets.WebSocket("ws://127.0.0.1:4502/DemoController", jXSockets.WEBSOCKET);
+
+
+            //ws.on('OnMyDemoClassMessage', function(data){}
+            //callback on open event
+            ws.on("open", function () {
+                console.log("Open!");
+
+            });
+
+            //callback on close event
+            ws.on("close", function () {
+                console.log("Close!");
+            });
+
+
+            //callback on OnMyDemoClassMessage event
+            ws.on("onmydemoclassmessage", function (msg) {
+                
+                //msg = jQuery.parseJSON(msg2); 
+                //   You dont need to parse in bound as JSON
+
+                console.log(msg.XMax);
+
+            //    return;
+
+                //Convert from string to float otherwise you get NaN.
+                var extent = new esri.geometry.Extent(parseFloat(msg.XMin), parseFloat(msg.YMin), parseFloat(msg.XMax), parseFloat(msg.YMax), new esri.SpatialReference({ "wkid": 102100 }));
+
+                console.log("Extent: " + extent.xmin + ", " + extent.ymin + ", " + extent.xmax + ", " + extent.ymax);
+                console.log("Map.Extent: " + map.extent.xmin + ", " + map.extent.ymin + ", " + map.extent.xmax + ", " + map.extent.ymax);
+
+                //Change the extent only if it has changed
+                if (map.extent.xmax.toFixed(2).toString() != extent.xmax.toFixed(2).toString()) {
+                    map.setExtent(extent);
+                    console.log("New Map.Extent: " + map.extent.xmin + ", " + map.extent.ymin + ", " + map.extent.xmax + ", " + map.extent.ymax);
+                }
+            });
+            //////Added code in init end
+        }
+
+        function showExtent(extent) {
+            var s = "";
+            s = "XMin: " + extent.xmin.toFixed(2) + " "
+           + "YMin: " + extent.ymin.toFixed(2) + " "
+           + "XMax: " + extent.xmax.toFixed(2) + " "
+           + "YMax: " + extent.ymax.toFixed(2);
+            dojo.byId("info").innerHTML = s;
+
+            ////Added code in showExtent
+            ws.publish("onmydemoclassmessage", { XMin: extent.xmin.toString(), YMin: extent.ymin.toString(), XMax: extent.xmax.toString(), YMax: extent.ymax.toString() });
+            ////Added code in showExtent end
+        }
+
+        dojo.ready(init);
+    </script>
+</head>
+<body class="claro">
+    <div id="map" style="width: 900px; height: 600px; border: 1px solid #000;"></div>
+    <div id="info" style="padding: 5px; margin: 5px; background-color: #eee;"></div>
+    Creates a map and adds an ArcGISTiledMapServiceLayer.  On map onExtentChanged event you should see the extent printed below the map.<br />
+    Map navigation using mouse:
+    <ul>
+        <li>Drag to pan</li>
+        <li>SHIFT + Click to recenter</li>
+        <li>SHIFT + Drag to zoom in</li>
+        <li>SHIFT + CTRL + Drag to zoom out</li>
+        <li>Mouse Scroll Forward to zoom in</li>
+        <li>Mouse Scroll Backward to zoom out</li>
+        <li>Use Arrow keys to pan</li>
+        <li>+ key to zoom in a level</li>
+        <li>- key to zoom out a level</li>
+        <li>Double Click to Center and Zoom in</li>
+    </ul>
+</body>
+</html>
